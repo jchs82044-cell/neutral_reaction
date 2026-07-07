@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중화반응 시뮬레이터</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f9fc;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; text-align: center; }
+        .control-panel {
+            background: #f0f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .slider-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #444;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3faf2;
+            border-left: 5px;
+            border-left: 5px solid #20c997;
+            border-radius: 4px;
+            color: #0ca678;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🧪 중화반응 실시간 시뮬레이터 (HCl + NaOH)</h1>
+    
+    <div class="control-panel">
+        <div class="slider-group">
+            <label for="hclInput">초기 HCl (염산) 분자 수: <span id="hclValue">5</span>개</label>
+            <input type="range" id="hclInput" min="1" max="10" value="5">
+        </div>
+        <div class="slider-group">
+            <label for="naohInput">최대 첨가 NaOH 분자 수: <span id="naohValue">10</span>개</label>
+            <input type="range" id="naohInput" min="1" max="20" value="10">
+        </div>
+    </div>
+
+    <canvas id="reactionChart" width="400" height="200"></canvas>
+
+    <div class="info-box" id="infoBox">
+        중화점: NaOH를 5개 넣었을 때 완전히 중화됩니다.
+    </div>
+</div>
+
+<script>
+    const hclInput = document.getElementById('hclInput');
+    const naohInput = document.getElementById('naohInput');
+    const hclValue = document.getElementById('hclValue');
+    const naohValue = document.getElementById('naohValue');
+    const infoBox = document.getElementById('infoBox');
+    
+    let chart;
+
+    function updateData() {
+        const initialHcl = parseInt(hclInput.value);
+        const maxNaoh = parseInt(naohInput.value);
+        
+        hclValue.innerText = initialHcl;
+        naohValue.innerText = maxNaoh;
+        infoBox.innerHTML = `<strong>중화점 안내:</strong> NaOH를 <strong>${initialHcl}개</strong> 넣었을 때 H⁺와 OH⁻가 모두 반응하여 완전히 중화됩니다.`;
+
+        const labels = [];
+        const hIons = [];
+        const clIons = [];
+        const naIons = [];
+        const ohIons = [];
+        const waterMolecules = [];
+
+        // 데이터 계산식
+        for (let naoh = 0; naoh <= maxNaoh; naoh++) {
+            labels.push(naoh);
+            clIons.push(initialHcl);
+            naIons.push(naoh);
+
+            if (initialHcl >= naoh) {
+                hIons.push(initialHcl - naoh);
+                ohIons.push(0);
+                waterMolecules.push(naoh);
+            } else {
+                hIons.push(0);
+                ohIons.push(naoh - initialHcl);
+                waterMolecules.push(initialHcl);
+            }
+        }
+
+        // 그래프 업데이트 혹은 생성
+        if (chart) {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = hIons;
+            chart.data.datasets[1].data = clIons;
+            chart.data.datasets[2].data = naIons;
+            chart.data.datasets[3].data = ohIons;
+            chart.data.datasets[4].data = waterMolecules;
+            chart.update();
+        } else {
+            const ctx = document.getElementById('reactionChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'H⁺ (수소 이온)', data: hIons, borderColor: 'red', backgroundColor: 'transparent', tension: 0.1 },
+                        { label: 'Cl⁻ (염화 이온)', data: clIons, borderColor: 'orange', backgroundColor: 'transparent', tension: 0.1 },
+                        { label: 'Na⁺ (나트륨 이온)', data: naIons, borderColor: 'blue', backgroundColor: 'transparent', tension: 0.1 },
+                        { label: 'OH⁻ (수산화 이온)', data: ohIons, borderColor: 'purple', backgroundColor: 'transparent', tension: 0.1 },
+                        { label: 'H₂O (물 분자)', data: waterMolecules, borderColor: 'cyan', borderDash: [5, 5], backgroundColor: 'transparent', tension: 0.1 }
+                    ]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: '넣어준 NaOH의 양' } },
+                        y: { title: { display: true, text: '개수' }, beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+    }
+
+    // 슬라이더 조절 이벤트 바인딩
+    hclInput.addEventListener('input', updateData);
+    naohInput.addEventListener('input', updateData);
+
+    // 초기 실행
+    updateData();
+</script>
+
+</body>
+</html>
